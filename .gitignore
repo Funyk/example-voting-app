@@ -4,3 +4,11 @@ bin/
 obj/
 .vs/
 node_modules/
+
+# CI outputs and local credentials
+reports/
+worker/out/
+.pytest_cache/
+.cache/
+.env
+*.pem

@@ -1,0 +1,61 @@
+name: Build to ACR and Deploy to Azure VM
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lab6-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: Build & Push Images to ACR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Build and push all three services with SHA and latest tags
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+        run: |
+          set -euo pipefail
+          for service in vote result worker; do
+            image="$ACR_LOGIN_SERVER/voting-app-$service"
+            docker build --pull --label io.kostiuk.lab=6 --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              -t "$image:$GITHUB_SHA" -t "$image:latest" "./$service"
+            docker push "$image:$GITHUB_SHA"
+            docker push "$image:latest"
+          done
+
+  deploy-to-vm:
+    name: Deploy with Docker Compose on Azure VM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build-and-push
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Copy Compose and deploy over SSH with a pinned host key
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USERNAME: ${{ secrets.VM_USERNAME }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: bash .github/scripts/deploy.sh

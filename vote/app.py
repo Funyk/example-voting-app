@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, make_response, g
 from redis import Redis
 import os
 import socket
-import random
+import secrets
 import json
 import logging
 
@@ -25,7 +25,7 @@ def get_redis():
 def hello():
     voter_id = request.cookies.get('voter_id')
     if not voter_id:
-        voter_id = hex(random.getrandbits(64))[2:-1]
+        voter_id = secrets.token_hex(8)
 
     vote = None
 
@@ -48,4 +48,5 @@ def hello():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=80, debug=True, threaded=True)
+    # Container ingress must bind all interfaces; the development debugger stays off.
+    app.run(host='0.0.0.0', port=80, debug=False, threaded=True)  # nosec B104
