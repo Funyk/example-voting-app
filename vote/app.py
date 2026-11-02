@@ -2,9 +2,10 @@ from flask import Flask, render_template, request, make_response, g
 from redis import Redis
 import os
 import socket
-import random
+import secrets
 import json
 import logging
+import re
 
 option_a = os.getenv('OPTION_A', "Cats")
 option_b = os.getenv('OPTION_B', "Dogs")
@@ -24,8 +25,10 @@ def get_redis():
 @app.route("/", methods=['POST','GET'])
 def hello():
     voter_id = request.cookies.get('voter_id')
-    if not voter_id:
-        voter_id = hex(random.getrandbits(64))[2:-1]
+    new_voter_id = None
+    if not voter_id or re.fullmatch(r'[0-9a-f]{16}', voter_id) is None:
+        new_voter_id = secrets.token_hex(8)
+        voter_id = new_voter_id
 
     vote = None
 
@@ -43,9 +46,11 @@ def hello():
         hostname=hostname,
         vote=vote,
     ))
-    resp.set_cookie('voter_id', voter_id)
+    if new_voter_id is not None:
+        resp.set_cookie('voter_id', new_voter_id, httponly=True, samesite='Lax')
     return resp
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=80, debug=True, threaded=True)
+    # Container ingress must bind all interfaces; the development debugger stays off.
+    app.run(host='0.0.0.0', port=80, debug=False, threaded=True)  # nosec B104
