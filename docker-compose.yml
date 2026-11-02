@@ -2,13 +2,13 @@ services:
   vote:
     image: ${ACR_LOGIN_SERVER:?Set ACR_LOGIN_SERVER}/voting-app-vote:${IMAGE_TAG:-latest}
     ports:
-      - "5000:80"
+      - "5000:8080"
     networks: [front-tier, back-tier]
     depends_on:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:80/"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=2).read()"]
       interval: 10s
       timeout: 3s
       retries: 12
@@ -21,7 +21,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:80/"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:80/', r => {r.resume(); process.exit(r.statusCode === 200 ? 0 : 1);}).on('error', () => process.exit(1));"]
       interval: 10s
       timeout: 3s
       retries: 12

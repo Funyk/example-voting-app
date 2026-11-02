@@ -14,6 +14,13 @@ printf 'ACR_LOGIN_SERVER=%s\nIMAGE_TAG=%s\n' "$registry" "$image_tag" > .env
 sudo docker compose pull
 sudo docker compose up -d --no-build --remove-orphans --wait --wait-timeout 240
 sudo docker compose ps
+vote_uid=$(sudo docker compose exec -T vote id -u)
+[[ "$vote_uid" =~ ^[0-9]+$ && "$vote_uid" -ne 0 ]]
+printf 'Vote runtime UID=%s (non-root)\n' "$vote_uid"
+sudo docker compose exec -T vote id
+printf 'Vote published endpoint: '
+sudo docker compose port vote 8080
+sudo docker compose exec -T vote python -c "import urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8080/', timeout=3); print('Vote container port 8080 HTTP status:', response.status)"
 curl --fail --silent --show-error http://127.0.0.1:5000/ > /dev/null
 curl --fail --silent --show-error http://127.0.0.1:5001/ > /dev/null
 # Limit cleanup to dangling images built by this lab, preserving other projects.

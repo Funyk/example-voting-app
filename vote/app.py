@@ -5,6 +5,7 @@ import socket
 import secrets
 import json
 import logging
+import re
 
 option_a = os.getenv('OPTION_A', "Cats")
 option_b = os.getenv('OPTION_B', "Dogs")
@@ -24,8 +25,10 @@ def get_redis():
 @app.route("/", methods=['POST','GET'])
 def hello():
     voter_id = request.cookies.get('voter_id')
-    if not voter_id:
-        voter_id = secrets.token_hex(8)
+    new_voter_id = None
+    if not voter_id or re.fullmatch(r'[0-9a-f]{16}', voter_id) is None:
+        new_voter_id = secrets.token_hex(8)
+        voter_id = new_voter_id
 
     vote = None
 
@@ -43,7 +46,8 @@ def hello():
         hostname=hostname,
         vote=vote,
     ))
-    resp.set_cookie('voter_id', voter_id)
+    if new_voter_id is not None:
+        resp.set_cookie('voter_id', new_voter_id, httponly=True, samesite='Lax')
     return resp
 
 

@@ -2,6 +2,8 @@ var express = require('express'),
     async = require('async'),
     { Pool } = require('pg'),
     cookieParser = require('cookie-parser'),
+    { rateLimit } = require('express-rate-limit'),
+    path = require('node:path'),
     app = express(),
     server = require('http').Server(app),
     io = require('socket.io')(server);
@@ -63,6 +65,14 @@ function collectVotesFromResult(result) {
   return votes;
 }
 
+var limiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 100,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use(limiter);
 app.use(cookieParser());
 app.use(express.urlencoded());
 app.use(express.static(__dirname + '/views'));
