@@ -12,10 +12,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Baseline: show real HIGH/CRITICAL findings before enabling the hard gate.
-  TRIVY_SEVERITY: HIGH,CRITICAL
-  TRIVY_EXIT_CODE: '0'
-  TRIVY_IGNORE_UNFIXED: 'false'
+  # Block fixable critical vulnerabilities; archive complete findings separately.
+  TRIVY_SEVERITY: CRITICAL
+  TRIVY_EXIT_CODE: '1'
+  TRIVY_IGNORE_UNFIXED: 'true'
 
 jobs:
   lint-and-sast:
